@@ -95,13 +95,13 @@ async function serveHtmlWithConfig(filePath, res) {
 
 // Serve index.html at the root URL
 app.get('/', (req, res) => {
-    const indexPath = path.join(__dirname, '..', 'frontend', 'index.html');
+    const indexPath = path.join(__dirname, '..', 'Frontend', 'index.html');
     serveHtmlWithConfig(indexPath, res);
 });
 
 // Serve admin.html
 app.get('/admin.html', (req, res) => {
-    const adminPath = path.join(__dirname, '..', 'frontend', 'admin.html');
+    const adminPath = path.join(__dirname, '..', 'Frontend', 'admin.html');
     serveHtmlWithConfig(adminPath, res);
 });
 
@@ -109,7 +109,7 @@ app.get('/admin.html', (req, res) => {
 // from the 'frontend' folder if they are requested directly (e.g., CSS files, Bootstrap JS).
 // This line must come AFTER your specific routes like '/' and '/admin.html'
 // to ensure those specific routes are handled first.
-app.use(express.static(path.join(__dirname, '..', 'frontend')));
+app.use(express.static(path.join(__dirname, '..', 'Frontend')));
 
 // --- Start the backend server ---
 // This tells your Express app to listen for incoming requests on the specified port.
