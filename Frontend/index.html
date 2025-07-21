@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Voice Platform</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; }
+        .navbar-brand { font-weight: bold; }
+        .form-container { background-color: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .advice-container { background-color: #e9ecef; padding: 20px; border-radius: 8px; margin-top: 20px; }
+        .feedback-item { background-color: #ffffff; padding: 15px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .status-badge { font-size: 0.8em; padding: 5px 8px; border-radius: 5px; }
+        .badge-pending { background-color: #ffc107; color: #343a40; }
+        .badge-resolved { background-color: #28a745; color: #ffffff; }
+        .badge-rejected { background-color: #dc3545; color: #ffffff; }
+        .action-buttons button { margin-right: 5px; }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">Student Voice</a>
+            <div class="d-flex ms-auto">
+                <button class="btn btn-warning me-2" onclick="logout()">Logout</button>
+                <a href="/admin.html" class="btn btn-info">Admin Panel</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="form-container">
+                    <h2 class="mb-4 text-center">Submit Your Feedback</h2>
+                    <form id="feedbackForm">
+                        <div class="mb-3">
+                            <label for="feedbackTitle" class="form-label">Title</label>
+                            <input type="text" class="form-control" id="feedbackTitle" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="feedbackCategory" class="form-label">Category</label>
+                            <select class="form-select" id="feedbackCategory" required>
+                                <option value="">Select Category</option>
+                                <option value="Academic">Academic</option>
+                                <option value="Infrastructure">Infrastructure</option>
+                                <option value="Student Services">Student Services</option>
+                                <option value="Events">Events</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="feedbackDescription" class="form-label">Description</label>
+                            <textarea class="form-control" id="feedbackDescription" rows="5" required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Submit Feedback</button>
+                    </form>
+
+                    <hr class="my-4">
+
+                    <h3 class="mb-3 text-center">Get Instant AI Advice</h3>
+                    <div class="mb-3">
+                        <label for="aiPrompt" class="form-label">Enter a question or description:</label>
+                        <textarea class="form-control" id="aiPrompt" rows="3" placeholder="E.g., How can I improve my study habits?"></textarea>
+                    </div>
+                    <button class="btn btn-success w-100 mb-3" onclick="getAiAdvice()">Get Advice</button>
+                    <div class="advice-container" id="aiAdviceOutput">
+                        <p class="text-muted">AI advice will appear here.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-5">
+            <h2 class="mb-4 text-center">Recently Submitted Feedback</h2>
+            <div id="feedbackList">
+                <p class="text-center text-muted">Loading feedback...</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script type="module">
+        // Firebase configuration will be dynamically injected by the server here
+        const firebaseConfig = {}; // Placeholder: The server will replace this line
+
+        import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, query, where, onSnapshot, doc, updateDoc, arrayUnion, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
+        // Initialize Firebase
+        const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        let currentUser = null; // To store the anonymous user's ID
+
+        // Anonymous authentication
+        async function authenticateAnonymously() {
+            try {
+                const userCredential = await signInAnonymously(auth);
+                currentUser = userCredential.user;
+                console.log("Signed in anonymously:", currentUser.uid);
+                loadFeedback(); // Load feedback after successful authentication
+            } catch (error) {
+                console.error("Error signing in anonymously:", error);
+            }
+        }
+
+        // Call authentication on page load
+        authenticateAnonymously();
+
+        document.getElementById('feedbackForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!currentUser) {
+                alert("Please wait, still authenticating...");
+                return;
+            }
+
+            const title = document.getElementById('feedbackTitle').value;
+            const category = document.getElementById('feedbackCategory').value;
+            const description = document.getElementById('feedbackDescription').value;
+
+            try {
+                await addDoc(collection(db, "feedback"), {
+                    title: title,
+                    category: category,
+                    description: description,
+                    status: "Pending",
+                    submittedBy: currentUser.uid, // Store the anonymous user's ID
+                    timestamp: new Date()
+                });
+                alert('Feedback submitted successfully!');
+                document.getElementById('feedbackForm').reset();
+            } catch (e) {
+                console.error("Error adding document: ", e);
+                alert('Error submitting feedback. Please try again.');
+            }
+        });
+
+        async function loadFeedback() {
+            if (!currentUser) return; // Wait for authentication
+
+            const feedbackListDiv = document.getElementById('feedbackList');
+            feedbackListDiv.innerHTML = '<p class="text-center text-muted">Loading feedback...</p>'; // Clear and show loading
+
+            // Listen for real-time updates for feedback submitted by the current anonymous user
+            const q = query(collection(db, "feedback"), where("submittedBy", "==", currentUser.uid));
+
+            onSnapshot(q, (snapshot) => {
+                if (snapshot.empty) {
+                    feedbackListDiv.innerHTML = '<p class="text-center text-muted">No feedback submitted yet.</p>';
+                    return;
+                }
+
+                feedbackListDiv.innerHTML = ''; // Clear previous feedback
+                snapshot.forEach((doc) => {
+                    const feedback = doc.data();
+                    const badgeClass = {
+                        "Pending": "badge-warning", // Updated to use specific classes
+                        "Resolved": "badge-success",
+                        "Rejected": "badge-danger"
+                    }[feedback.status] || "badge-secondary"; // Default if status is unknown
+
+                    feedbackListDiv.innerHTML += `
+                        <div class="feedback-item">
+                            <h5>${feedback.title} <span class="badge ${badgeClass} float-end">${feedback.status}</span></h5>
+                            <p><strong>Category:</strong> ${feedback.category}</p>
+                            <p>${feedback.description}</p>
+                            <small class="text-muted">Submitted on: ${feedback.timestamp.toDate().toLocaleString()}</small>
+                        </div>
+                    `;
+                });
+            }, (error) => {
+                console.error("Error loading feedback:", error);
+                feedbackListDiv.innerHTML = '<p class="text-center text-danger">Error loading feedback.</p>';
+            });
+        }
+
+
+        async function getAiAdvice() {
+            const aiPrompt = document.getElementById('aiPrompt').value.trim();
+            const aiAdviceOutput = document.getElementById('aiAdviceOutput');
+
+            if (!aiPrompt) {
+                aiAdviceOutput.innerHTML = '<p class="text-danger">Please enter a question or description for AI advice.</p>';
+                return;
+            }
+
+            aiAdviceOutput.innerHTML = '<p class="text-muted">Getting AI advice...</p>';
+
+            const loadingSpinner = `
+                <div class="d-flex justify-content-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+                <p class="text-center mt-2 text-muted">Thinking...</p>
+            `;
+            aiAdviceOutput.innerHTML = loadingSpinner;
+
+
+            // Call your backend endpoint
+            const backendUrl = "/generate-advice"; // Use relative path since backend serves this HTML
+            try {
+                const response = await fetch(backendUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt: aiPrompt })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(`API call failed: ${response.status} - ${errorData.error || 'Unknown error'}`);
+                }
+
+                const result = await response.json();
+                aiAdviceOutput.innerHTML = `<p>${result.advice || "Could not retrieve advice."}</p>`;
+            } catch (error) {
+                console.error("Error fetching AI advice:", error);
+                aiAdviceOutput.innerHTML = `<p class="text-danger">Error getting AI advice: ${error.message}</p>`;
+            }
+        }
+
+        // Basic logout function (for anonymous, mainly clears local session if any)
+        function logout() {
+            auth.signOut().then(() => {
+                console.log("User signed out.");
+                currentUser = null;
+                // Optionally redirect or refresh to force re-auth
+                location.reload();
+            }).catch((error) => {
+                console.error("Error signing out:", error);
+            });
+        }
+    </script>
+</body>
+</html>
