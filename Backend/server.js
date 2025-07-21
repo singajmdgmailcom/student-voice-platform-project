@@ -6,25 +6,25 @@ import path from 'path'; // For handling file paths
 import fs from 'fs/promises'; // For reading files asynchronously
 import { fileURLToPath } from 'url'; // For __dirname in ES modules
 
-
+// Load environment variables from .env file
+dotenv.config();
 
 // Fix for __dirname in ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+// Render will provide the PORT environment variable. Fallback to 3000 for local development.
 const port = process.env.PORT || 3000;
 
 // Configure CORS
 // IMPORTANT: Adjust the 'origin' to your actual frontend domain(s) in production.
-// If your frontend is served from the same domain as this backend, you might not strictly need cors middleware here,
-// but it's good practice for API routes that might be called from other origins.
 app.use(cors({
     origin: [
         'http://localhost:3000', // For local frontend development (if you still run your frontend locally)
         'http://localhost:5000', // Default Firebase Hosting emulator URL
         'http://127.0.0.1:5000', // Alternative Firebase Hosting emulator URL
-        'https://studentvoiceplatform.web.app',       // REPLACE with your actual project ID
+        'https://studentvoiceplatform.web.app',          // REPLACE with your actual project ID
         'https://studentvoiceplatform.firebaseapp.com' // REPLACE with your actual project ID
     ]
 }));
@@ -111,11 +111,11 @@ app.get('/admin.html', (req, res) => {
 // to ensure those specific routes are handled first.
 app.use(express.static(path.join(__dirname, '..', 'frontend')));
 
-
-// Start the backend server
-import { https } from 'firebase-functions'; // NEW: Add this import at the top with other imports
-
-// ... (rest of your code, including app.use, app.post, app.get, serveHtmlWithConfig etc.) ...
-
-// EXPORT THE EXPRESS APP AS A CLOUD FUNCTION
-export const appServer = https.onRequest(app); // NEW: Export your Express app as an HTTPS function
+// --- Start the backend server ---
+// This tells your Express app to listen for incoming requests on the specified port.
+app.listen(port, () => {
+    console.log(`Backend server running on port ${port}`);
+    // These console logs are helpful for local testing but will appear in Render logs too
+    console.log(`Local User Panel: http://localhost:${port}`);
+    console.log(`Local Admin Panel: http://localhost:${port}/admin.html`);
+});
