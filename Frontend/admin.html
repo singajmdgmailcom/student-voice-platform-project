@@ -3,115 +3,451 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Panel - Student Voice</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>Admin Dashboard - Student Voice</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Inter Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js for Analytics Charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { background-color: #f8f9fa; }
-        .navbar-brand { font-weight: bold; }
-        .feedback-item { background-color: #ffffff; padding: 15px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .status-badge { font-size: 0.8em; padding: 5px 8px; border-radius: 5px; }
-        .badge-pending { background-color: #ffc107; color: #343a40; }
-        .badge-resolved { background-color: #28a745; color: #ffffff; }
-        .badge-rejected { background-color: #dc3545; color: #ffffff; }
-        .action-buttons button { margin-right: 5px; }
+        /* Custom CSS for specific elements not covered by Tailwind */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f9fafb; /* Light background for the dashboard */
+        }
+        /* Styling for individual report cards */
+        .report-card {
+            transition: all 0.3s ease;
+        }
+        .report-card:hover {
+            transform: translateY(-5px); /* Lift effect on hover */
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* Enhanced shadow */
+        }
+        /* Styling for statistic cards */
+        .stat-card {
+            transition: all 0.3s ease;
+        }
+        .stat-card:hover {
+            background-color: #f3f4f6; /* Subtle background change on hover */
+        }
+        /* Custom scrollbar for conversation thread to match design */
+        .conversation-scroll::-webkit-scrollbar {
+            width: 8px;
+        }
+        .conversation-scroll::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        .conversation-scroll::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+        .conversation-scroll::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
     </style>
 </head>
-<body>
-
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="#">Admin Panel</a>
-            <div class="d-flex ms-auto">
-                <a href="/" class="btn btn-info">User Panel</a>
-            </div>
-        </div>
-    </nav>
-
-    <div class="container mt-5">
-        <h2 class="mb-4 text-center">Manage Student Feedback</h2>
-        <div id="feedbackList">
-            <p class="text-center text-muted">Loading feedback...</p>
-        </div>
+<body class="text-gray-800">
+    <!-- Loading State: Shown initially while Firebase authentication is in progress -->
+    <div id="loading-state" class="min-h-screen flex items-center justify-center">
+        <i class="fas fa-spinner fa-spin text-4xl text-indigo-500"></i>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Main Dashboard Container: Hidden initially, shown after successful Firebase authentication -->
+    <div id="dashboard-container" class="hidden container mx-auto p-4 md:p-8">
+        <header class="text-center mb-10">
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-800">Administrator Dashboard</h1>
+            <p class="text-md text-gray-600 mt-3">View and manage student reports.</p>
+            <!-- Removed "Go to Student Page" and "Logout" buttons as requested -->
+        </header>
+
+        <!-- Analytics Section: Displays key metrics and charts -->
+        <section id="analytics" class="mb-12">
+            <h2 class="text-2xl font-bold text-gray-700 mb-6">Analytics Overview</h2>
+            
+            <!-- Stat Cards: Displays numerical summaries of reports -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div class="stat-card bg-white p-6 rounded-lg shadow flex items-center">
+                    <div class="bg-blue-100 p-3 rounded-full mr-4">
+                        <i class="fas fa-file-alt text-2xl text-blue-500"></i>
+                    </div>
+                    <div>
+                        <p class="text-3xl font-bold text-gray-800" id="total-reports">0</p>
+                        <p class="text-sm text-gray-500">Total Reports</p>
+                    </div>
+                </div>
+                <div class="stat-card bg-white p-6 rounded-lg shadow flex items-center">
+                    <div class="bg-yellow-100 p-3 rounded-full mr-4">
+                        <i class="fas fa-hourglass-half text-2xl text-yellow-500"></i>
+                    </div>
+                    <div>
+                        <p class="text-3xl font-bold text-gray-800" id="pending-reports">0</p>
+                        <p class="text-sm text-gray-500">Pending Reports</p>
+                    </div>
+                </div>
+                <div class="stat-card bg-white p-6 rounded-lg shadow flex items-center">
+                   <div class="bg-green-100 p-3 rounded-full mr-4">
+                        <i class="fas fa-check-circle text-2xl text-green-500"></i>
+                    </div>
+                    <div>
+                        <p class="text-3xl font-bold text-gray-800" id="resolved-reports">0</p>
+                        <p class="text-sm text-gray-500">Resolved Reports</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts: Visual representation of report data -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="bg-white p-6 rounded-lg shadow">
+                    <h3 class="font-semibold mb-4">Reports by Category</h3>
+                    <div class="h-64">
+                        <canvas id="categoryChart"></canvas>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow">
+                    <h3 class="font-semibold mb-4">Reports by Status</h3>
+                    <div class="h-64">
+                        <canvas id="statusChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Main Reports Container: Displays individual report cards -->
+        <main id="reports-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <p class="col-span-full text-center text-gray-500 py-4">Loading reports...</p>
+        </main>
+    </div>
+
     <script type="module">
-        // Firebase configuration will be dynamically injected by the server here
-        const firebaseConfig = {}; // Placeholder: The server will replace this line
-
+        // Firebase SDK imports
         import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getFirestore, collection, getDocs, onSnapshot, doc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        // Authentication imports removed as there's no login
-        // import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, onSnapshot, doc, updateDoc, arrayUnion, query, orderBy, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
-
+        // Your Firebase project configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyC5fQX9JAH4Qp18UM8VMma4Y66aavxAX1U", // Your Firebase API Key
+            authDomain: "studentvoiceplatform.firebaseapp.com",
+            projectId: "studentvoiceplatform",
+            storageBucket: "studentvoiceplatform.firebasestorage.app",
+            messagingSenderId: "144806283507",
+            appId: "1:144806283507:web:7531ca5af6baec47bc4f86"
+        };
+        
+        // Initialize Firebase app or get existing one
         const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
         const db = getFirestore(app);
-        // const auth = getAuth(app); // Auth instance not needed if no login
+        const auth = getAuth(app);
 
+        // Global variables for Chart.js instances to allow updates
+        let categoryChartInstance = null;
+        let statusChartInstance = null;
 
-        // Admin login functions and onAuthStateChanged removed
-        // async function adminLogin() { ... }
-        // onAuthStateChanged(auth, (user) => { ... });
+        // Admin authentication and app initialization flow
+        (async () => {
+            // IMPORTANT: For a real admin panel, implement secure authentication here (e.g., email/password, Google Sign-In).
+            // Anonymous sign-in is used for demonstration/simplicity but is NOT secure for admin access.
+            try {
+                await signInAnonymously(auth); // Authenticate anonymously for now
+                document.getElementById('loading-state').style.display = 'none'; // Hide loading spinner
+                document.getElementById('dashboard-container').style.display = 'block'; // Show main dashboard content
+                runApp(db); // Start the main admin application logic
+            } catch (error) {
+                console.error("Firebase initialization failed:", error);
+                // Display a user-friendly error message if Firebase fails to initialize
+                document.body.innerHTML = `<div class="min-h-screen flex items-center justify-center"><div class="text-center p-8 bg-white rounded-lg shadow-lg"><h2 class="text-2xl font-bold text-red-700 mb-4">Connection Error</h2><p class="text-gray-600">Could not connect to Firebase. Please ensure Anonymous Sign-In is enabled in your Firebase project.</p><p class="text-gray-600">For admin panel, consider implementing a proper authentication method.</p></div></div>`;
+            }
+        })();
 
-        // Load feedback immediately as there's no login required
-        loadFeedback();
+        // Main admin application logic encapsulated in a function
+        function runApp(db) {
+            const reportsContainer = document.getElementById('reports-container');
+            const appId = 'default-app-id'; // Identifier for your application's data within Firestore
+            // Firestore collection path for reports. This follows the recommended secure structure.
+            const reportsCollectionPath = `artifacts/${appId}/public/data/reports`;
+            const reportsCollection = collection(db, reportsCollectionPath);
 
-        async function loadFeedback() {
-            const feedbackListDiv = document.getElementById('feedbackList');
-            feedbackListDiv.innerHTML = '<p class="text-center text-muted">Loading feedback...</p>'; // Clear and show loading
+            // Removed logout button handling as the button is no longer in the HTML.
+            // If you later add a secure login, you'd re-introduce logout functionality.
 
-            // Listen for real-time updates on all feedback
-            onSnapshot(collection(db, "feedback"), (snapshot) => {
+            // Set up real-time listener for all reports, ordered by timestamp (descending)
+            // Note: orderBy can sometimes require Firestore indexes. If you encounter errors, check your Firebase Console -> Firestore -> Indexes tab.
+            const q = query(reportsCollection, orderBy("timestamp", "desc"));
+            onSnapshot(q, (snapshot) => {
+                reportsContainer.innerHTML = ''; // Clear previous reports
+                
                 if (snapshot.empty) {
-                    feedbackListDiv.innerHTML = '<p class="text-center text-muted">No feedback submitted yet.</p>';
+                    reportsContainer.innerHTML = `<p class="col-span-full text-center text-gray-500">No reports submitted yet.</p>`;
+                    // Clear charts and stats if no reports
+                    updateAnalytics([]); 
                     return;
                 }
+                
+                const allReports = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                updateAnalytics(allReports); // Update dashboard statistics and charts
 
-                feedbackListDiv.innerHTML = ''; // Clear previous feedback
-                snapshot.forEach((doc) => {
-                    const feedback = doc.data();
-                    const badgeClass = {
-                        "Pending": "badge-warning",
-                        "Resolved": "badge-success",
-                        "Rejected": "badge-danger"
-                    }[feedback.status] || "badge-secondary";
+                // Render each report as a card
+                allReports.forEach(report => {
+                    const reportId = report.id; // Firestore document ID
+                    const reportData = report; // The report data itself
 
-                    feedbackListDiv.innerHTML += `
-                        <div class="feedback-item" data-id="${doc.id}">
-                            <h5>${feedback.title} <span class="badge ${badgeClass} float-end">${feedback.status}</span></h5>
-                            <p><strong>Category:</strong> ${feedback.category}</p>
-                            <p>${feedback.description}</p>
-                            <small class="text-muted">Submitted by: ${feedback.submittedBy} on: ${feedback.timestamp.toDate().toLocaleString()}</small>
-                            <div class="action-buttons mt-2">
-                                <button class="btn btn-sm btn-success" onclick="updateFeedbackStatus('${doc.id}', 'Resolved')">Resolve</button>
-                                <button class="btn btn-sm btn-danger" onclick="updateFeedbackStatus('${doc.id}', 'Rejected')">Reject</button>
+                    const card = document.createElement('div');
+                    card.className = 'report-card bg-white rounded-lg shadow-md p-6 border-l-4 border-indigo-500 flex flex-col';
+                    card.dataset.reportId = reportId; // Store document ID on the card
+
+                    const date = new Date(reportData.timestamp.seconds * 1000).toLocaleString();
+
+                    // Generate HTML for conversation thread
+                    let conversationHtml = '<p class="text-gray-400 text-center p-2">No messages yet.</p>';
+                    if (reportData.replies && reportData.replies.length > 0) {
+                        conversationHtml = reportData.replies.map(r => {
+                            const replyDate = new Date(r.timestamp.seconds * 1000).toLocaleString();
+                            // Differentiate between admin and student replies
+                            if (r.sender === 'admin') {
+                                return `<div class="bg-indigo-100 p-2 rounded-md"><p class="font-bold text-sm text-indigo-800">Admin:</p><p>${r.text}</p><p class="text-xs text-gray-500 text-right italic">${replyDate}</p></div>`;
+                            } else {
+                                return `<div class="bg-green-100 p-2 rounded-md"><p class="font-bold text-sm text-green-800">Student:</p><p>${r.text}</p><p class="text-xs text-gray-500 text-right italic">${replyDate}</p></div>`;
+                            }
+                        }).join('');
+                    }
+                    
+                    // Generate link for attachment if present
+                    const attachmentLink = reportData.hasAttachment ? 
+                        `<a href="#" data-report-id="${reportId}" class="view-attachment-link text-blue-500 hover:underline text-sm"><i class="fas fa-paperclip mr-1"></i>View Attached Image</a>` : '';
+                    
+                    card.innerHTML = `
+                        <div class="flex-grow">
+                            <div class="flex justify-between items-start mb-2">
+                                <span class="text-sm font-semibold capitalize px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full">${reportData.category}</span>
+                                <span class="text-xs text-gray-500">${date}</span>
+                            </div>
+                            <h3 class="text-lg font-bold text-gray-800 mb-2">Report ID: <span class="font-mono">${reportData.trackingId}</span></h3>
+                            <p class="text-sm text-gray-600 mb-2 h-20 overflow-y-auto"><strong>Description:</strong> ${reportData.description}</p>
+                            ${attachmentLink}
+                        </div>
+                        
+                        <div class="flex-shrink-0 mt-4">
+                            <!-- Status Update Section -->
+                            <div class="mb-4">
+                                <label for="status-${reportId}" class="block text-sm font-medium text-gray-700">Update Status</label>
+                                <div class="flex items-center mt-1">
+                                    <select id="status-${reportId}" class="w-full p-2 border border-gray-300 rounded-md shadow-sm">
+                                        <option value="Submitted" ${reportData.currentStatus === 'Submitted' ? 'selected' : ''}>Submitted</option>
+                                        <option value="Under Investigation" ${reportData.currentStatus === 'Under Investigation' ? 'selected' : ''}>Under Investigation</option>
+                                        <option value="Action Taken" ${reportData.currentStatus === 'Action Taken' ? 'selected' : ''}>Action Taken</option>
+                                        <option value="Resolved" ${reportData.currentStatus === 'Resolved' ? 'selected' : ''}>Resolved</option>
+                                        <option value="Rejected" ${reportData.currentStatus === 'Rejected' ? 'selected' : ''}>Rejected</option>
+                                    </select>
+                                    <button data-doc-id="${reportId}" class="update-status-btn ml-2 px-3 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"><i class="fas fa-check"></i></button>
+                                </div>
+                            </div>
+                            <!-- Conversation Section -->
+                            <div class="mt-4">
+                                <h4 class="font-semibold mb-2">Conversation</h4>
+                                <div class="mb-2 space-y-2 text-sm max-h-32 overflow-y-auto bg-gray-50 p-2 rounded-md border conversation-scroll">
+                                    ${conversationHtml}
+                                </div>
+                                <form class="reply-form" data-doc-id="${reportId}">
+                                    <textarea class="w-full p-2 border border-gray-300 rounded-md" placeholder="Type your reply..." required></textarea>
+                                    <button type="submit" class="w-full mt-2 bg-green-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-green-700">Send Reply</button>
+                                </form>
                             </div>
                         </div>
                     `;
+                    reportsContainer.appendChild(card);
                 });
-            }, (error) => {
-                console.error("Error loading feedback:", error);
-                feedbackListDiv.innerHTML = '<p class="text-center text-danger">Error loading feedback.</p>';
-            });
-        }
 
-        async function updateFeedbackStatus(docId, newStatus) {
-            // No authentication check here, relies entirely on Firebase Security Rules
-            try {
-                const feedbackRef = doc(db, "feedback", docId);
-                await updateDoc(feedbackRef, {
-                    status: newStatus
+                addEventListeners(); // Attach event listeners after rendering cards
+            }, (error) => {
+                console.error("Error loading reports:", error);
+                reportsContainer.innerHTML = '<p class="col-span-full text-center text-red-500 py-4">Error loading reports.</p>';
+            });
+
+            // Function to update analytics numbers and charts
+            function updateAnalytics(reports) {
+                const totalReports = reports.length;
+                const pendingReports = reports.filter(r => r.currentStatus === 'Submitted' || r.currentStatus === 'Under Investigation').length;
+                const resolvedReports = reports.filter(r => r.currentStatus === 'Resolved').length;
+                
+                document.getElementById('total-reports').textContent = totalReports;
+                document.getElementById('pending-reports').textContent = pendingReports;
+                document.getElementById('resolved-reports').textContent = resolvedReports;
+
+                // Count reports by category and status for charts
+                const categoryCounts = reports.reduce((acc, report) => { 
+                    acc[report.category] = (acc[report.category] || 0) + 1; 
+                    return acc; 
+                }, {});
+                const statusCounts = reports.reduce((acc, report) => { 
+                    acc[report.currentStatus] = (acc[report.currentStatus] || 0) + 1; 
+                    return acc; 
+                }, {});
+
+                renderCategoryChart(Object.keys(categoryCounts), Object.values(categoryCounts));
+                renderStatusChart(Object.keys(statusCounts), Object.values(statusCounts));
+            }
+
+            // Function to render/update the Category Doughnut Chart
+            function renderCategoryChart(labels, data) {
+                const ctx = document.getElementById('categoryChart').getContext('2d');
+                if (categoryChartInstance) categoryChartInstance.destroy(); // Destroy existing chart before creating a new one
+                categoryChartInstance = new Chart(ctx, {
+                    type: 'doughnut', 
+                    data: { 
+                        labels, 
+                        datasets: [{ 
+                            data, 
+                            backgroundColor: ['#818cf8', '#f87171', '#fbbf24', '#4ade80', '#60a5fa', '#c084fc'], // Tailwind-inspired colors
+                            hoverOffset: 4 
+                        }] 
+                    },
+                    options: { 
+                        responsive: true, 
+                        maintainAspectRatio: false, 
+                        plugins: { 
+                            legend: { 
+                                position: 'bottom' 
+                            } 
+                        } 
+                    }
                 });
-                console.log(`Feedback ${docId} status updated to ${newStatus}`);
-            } catch (error) {
-                console.error("Error updating feedback status:", error);
-                alert(`Error updating status: ${error.message}`);
+            }
+
+            // Function to render/update the Status Bar Chart
+            function renderStatusChart(labels, data) {
+                const ctx = document.getElementById('statusChart').getContext('2d');
+                if (statusChartInstance) statusChartInstance.destroy(); // Destroy existing chart before creating a new one
+                statusChartInstance = new Chart(ctx, {
+                    type: 'bar', 
+                    data: { 
+                        labels, 
+                        datasets: [{ 
+                            label: 'Reports by Status', 
+                            data, 
+                            backgroundColor: ['#a5b4fc', '#fca5a5', '#fcd34d', '#86efac', '#e0e7ff', '#fef3c7'] // Tailwind-inspired colors
+                        }] 
+                    },
+                    options: { 
+                        responsive: true, 
+                        maintainAspectRatio: false, 
+                        scales: { 
+                            y: { 
+                                beginAtZero: true, 
+                                ticks: { stepSize: 1 } // Ensure integer steps for count
+                            } 
+                        }, 
+                        plugins: { 
+                            legend: { display: false } // Hide legend for bar chart
+                        } 
+                    }
+                });
+            }
+
+            // Function to view attached image in a new window
+            async function viewAttachment(reportId) {
+                try {
+                    const attachmentRef = doc(db, reportsCollectionPath, reportId, 'attachment', 'data');
+                    const docSnap = await getDoc(attachmentRef);
+                    if (docSnap.exists()) {
+                        const imageData = docSnap.data().imageData;
+                        const newWindow = window.open();
+                        // Write image directly to the new window
+                        newWindow.document.write(`<img src="${imageData}" style="max-width: 100%; height: auto; display: block; margin: auto;">`);
+                        newWindow.document.title = `Attachment for Report ${reportId}`;
+                    } else {
+                        // Use a custom modal or message box in production instead of alert
+                        alert("Attachment data not found for this report.");
+                    }
+                } catch (error) {
+                    console.error("Error fetching attachment:", error);
+                    // Use a custom modal or message box in production instead of alert
+                    alert("Could not load the attachment due to an error.");
+                }
+            }
+
+            // Function to attach event listeners to dynamically created elements
+            function addEventListeners() {
+                // Event listeners for "View Attached Image" links
+                document.querySelectorAll('.view-attachment-link').forEach(link => {
+                    link.addEventListener('click', (e) => {
+                        e.preventDefault(); // Prevent default link behavior
+                        e.stopPropagation(); // Stop event propagation to prevent opening report card
+                        const reportId = e.currentTarget.dataset.reportId;
+                        viewAttachment(reportId);
+                    });
+                });
+
+                // Event listeners for admin reply forms
+                document.querySelectorAll('.reply-form').forEach(form => {
+                    form.addEventListener('submit', async (e) => {
+                        e.preventDefault(); // Prevent default form submission
+                        e.stopPropagation(); // Stop event propagation
+                        const docId = e.target.dataset.docId;
+                        const replyTextarea = e.target.querySelector('textarea');
+                        const replyText = replyTextarea.value.trim();
+                        const sendButton = e.target.querySelector('button[type="submit"]');
+
+                        if (!replyText) return;
+
+                        sendButton.disabled = true;
+                        sendButton.textContent = 'Sending...';
+
+                        const reportRef = doc(db, reportsCollectionPath, docId);
+                        try {
+                            await updateDoc(reportRef, { 
+                                replies: arrayUnion({ text: replyText, timestamp: new Date(), sender: 'admin' }) 
+                            });
+                            replyTextarea.value = ''; // Clear textarea after sending
+                            // The onSnapshot listener will automatically re-render the card with the new reply
+                        } catch (error) {
+                            console.error("Error adding admin reply:", error);
+                            // Use a custom modal or message box in production instead of alert
+                            alert("Failed to send reply.");
+                        } finally {
+                            sendButton.disabled = false;
+                            sendButton.textContent = 'Send Reply';
+                        }
+                    });
+                });
+
+                // Event listeners for update status buttons
+                document.querySelectorAll('.update-status-btn').forEach(button => {
+                    button.addEventListener('click', async (e) => {
+                        e.stopPropagation(); // Stop event propagation
+                        const docId = e.currentTarget.dataset.docId;
+                        const newStatusSelect = document.getElementById(`status-${docId}`);
+                        const newStatus = newStatusSelect.value;
+
+                        if (!newStatus) return;
+
+                        button.disabled = true;
+                        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; // Show spinner
+
+                        const reportRef = doc(db, reportsCollectionPath, docId);
+                        try {
+                            await updateDoc(reportRef, { 
+                                currentStatus: newStatus, 
+                                statusHistory: arrayUnion({ status: newStatus, timestamp: new Date() }) 
+                            });
+                            // Use a custom modal or message box in production instead of alert
+                            alert('Status updated!');
+                            // The onSnapshot listener will automatically re-render the card with the new status
+                        } catch (error) {
+                            console.error("Error updating status:", error);
+                            // Use a custom modal or message box in production instead of alert
+                            alert("Failed to update status.");
+                        } finally {
+                            button.disabled = false;
+                            button.innerHTML = '<i class="fas fa-check"></i>'; // Restore check icon
+                        }
+                    });
+                });
             }
         }
-
-        // Logout function removed as there's no login
-        // function logout() { ... }
     </script>
 </body>
 </html>

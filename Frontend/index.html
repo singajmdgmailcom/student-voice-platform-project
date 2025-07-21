@@ -4,236 +4,591 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Student Voice Platform</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Inter Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- UUID Library (for generating tracking IDs) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/uuid/8.3.2/uuid.min.js"></script>
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { background-color: #f8f9fa; }
-        .navbar-brand { font-weight: bold; }
-        .form-container { background-color: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-        .advice-container { background-color: #e9ecef; padding: 20px; border-radius: 8px; margin-top: 20px; }
-        .feedback-item { background-color: #ffffff; padding: 15px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .status-badge { font-size: 0.8em; padding: 5px 8px; border-radius: 5px; }
-        .badge-pending { background-color: #ffc107; color: #343a40; }
-        .badge-resolved { background-color: #28a745; color: #ffffff; }
-        .badge-rejected { background-color: #dc3545; color: #ffffff; }
-        .action-buttons button { margin-right: 5px; }
+        /* Custom CSS for animations and specific elements not covered by Tailwind */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8; /* Light background for a modern feel */
+        }
+        /* Tab content animations */
+        .tab-content { display: none; animation: fadeIn 0.5s ease-in-out; }
+        .tab-content.active { display: block; }
+        /* Loader spinner */
+        .loader { border: 4px solid rgba(255, 255, 255, 0.3); border-top: 4px solid #ffffff; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block; margin-left: 8px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        /* Fade in animation for content */
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        /* Main container styling with frosted glass effect */
+        .main-container { 
+            background: rgba(255, 255, 255, 0.8); 
+            backdrop-filter: blur(10px); 
+            border: 1px solid rgba(255, 255, 255, 0.2); 
+            transition: box-shadow 0.3s ease; 
+        }
+        .main-container:hover { box-shadow: 0 20px 30px -15px rgba(0, 0, 0, 0.15); }
+        /* Tab button styling with animated underline */
+        .tab-button { transition: all 0.3s ease; position: relative; }
+        .tab-button:after { content: ''; position: absolute; bottom: -2px; left: 0; width: 0; height: 3px; background-color: #6366f1; transition: width 0.3s ease; }
+        .tab-button.active:after { width: 100%; }
+        /* Focus styles for form elements */
+        select, input, textarea { transition: all 0.3s ease; }
+        select:focus, input:focus, textarea:focus { box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.3); border-color: #6366f1; }
     </style>
 </head>
-<body>
+<body class="text-gray-800">
 
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="#">Student Voice</a>
-            <div class="d-flex ms-auto">
-                <button class="btn btn-warning me-2" onclick="logout()">Logout</button>
-                <a href="/admin.html" class="btn btn-info">Admin Panel</a>
-            </div>
-        </div>
-    </nav>
-
-    <div class="container mt-5">
-        <div class="row justify-content-center">
-            <div class="col-md-8">
-                <div class="form-container">
-                    <h2 class="mb-4 text-center">Submit Your Feedback</h2>
-                    <form id="feedbackForm">
-                        <div class="mb-3">
-                            <label for="feedbackTitle" class="form-label">Title</label>
-                            <input type="text" class="form-control" id="feedbackTitle" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="feedbackCategory" class="form-label">Category</label>
-                            <select class="form-select" id="feedbackCategory" required>
-                                <option value="">Select Category</option>
-                                <option value="Academic">Academic</option>
-                                <option value="Infrastructure">Infrastructure</option>
-                                <option value="Student Services">Student Services</option>
-                                <option value="Events">Events</option>
-                                <option value="Other">Other</option>
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label for="feedbackDescription" class="form-label">Description</label>
-                            <textarea class="form-control" id="feedbackDescription" rows="5" required></textarea>
-                        </div>
-                        <button type="submit" class="btn btn-primary w-100">Submit Feedback</button>
-                    </form>
-
-                    <hr class="my-4">
-
-                    <h3 class="mb-3 text-center">Get Instant AI Advice</h3>
-                    <div class="mb-3">
-                        <label for="aiPrompt" class="form-label">Enter a question or description:</label>
-                        <textarea class="form-control" id="aiPrompt" rows="3" placeholder="E.g., How can I improve my study habits?"></textarea>
-                    </div>
-                    <button class="btn btn-success w-100 mb-3" onclick="getAiAdvice()">Get Advice</button>
-                    <div class="advice-container" id="aiAdviceOutput">
-                        <p class="text-muted">AI advice will appear here.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="mt-5">
-            <h2 class="mb-4 text-center">Recently Submitted Feedback</h2>
-            <div id="feedbackList">
-                <p class="text-center text-muted">Loading feedback...</p>
-            </div>
-        </div>
+    <!-- Loading State: Shown initially while Firebase auth is setting up -->
+    <div id="loading-state" class="min-h-screen flex items-center justify-center">
+        <i class="fas fa-spinner fa-spin text-4xl text-indigo-500"></i>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script type="module">
-        // Firebase configuration will be dynamically injected by the server here
-        const firebaseConfig = {}; // Placeholder: The server will replace this line
+    <!-- Main App Container: Hidden initially, shown after Firebase auth -->
+    <div id="app-container" class="hidden container mx-auto p-4 md:p-8 max-w-2xl">
+        <header class="text-center mb-10">
+            <h1 class="text-4xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 to-purple-500">Student Voice</h1>
+            <p class="text-md text-gray-600 mt-3">Your Secure & Anonymous Channel for Campus Concerns</p>
+        </header>
 
+        <div class="main-container rounded-2xl shadow-lg p-6 md:p-8">
+            <!-- Tab Navigation -->
+            <div class="flex border-b-2 border-gray-200 mb-8">
+                <button id="submit-tab-button" class="tab-button flex-1 py-3 text-center font-semibold text-indigo-500 active">
+                    <i class="fas fa-edit mr-2"></i>Submit Report
+                </button>
+                <button id="track-tab-button" class="tab-button flex-1 py-3 text-center font-semibold text-gray-500">
+                    <i class="fas fa-search-location mr-2"></i>Track Report
+                </button>
+            </div>
+
+            <!-- Submit Report Tab Content -->
+            <div id="submit-tab" class="tab-content active">
+                <form id="report-form">
+                    <div class="mb-5">
+                        <label for="category" class="block text-sm font-medium text-gray-700 mb-2">Category</label>
+                        <select id="category" name="category" class="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg shadow-sm" required>
+                            <option value="">Select a category...</option>
+                            <option value="harassment">Harassment</option>
+                            <option value="ragging">Ragging</option>
+                            <option value="academic">Academic Issues</option>
+                            <option value="infrastructure">Infrastructure & Facilities</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div class="mb-5">
+                        <label for="description" class="block text-sm font-medium text-gray-700 mb-2">Detailed Description</label>
+                        <textarea id="description" name="description" rows="6" class="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg shadow-sm" placeholder="Describe the incident..." required></textarea>
+                    </div>
+                    <div class="mb-5">
+                        <button type="button" id="get-advice-btn" class="w-full flex items-center justify-center bg-gradient-to-r from-sky-500 to-blue-500 text-white font-semibold py-3 px-4 rounded-lg hover:shadow-lg hover:scale-105 transform transition-all duration-300">
+                            <span id="advice-btn-text">✨ Get Instant Advice</span>
+                            <div id="advice-loader" class="loader hidden"></div>
+                        </button>
+                    </div>
+                    <div id="advice-container" class="hidden my-4 p-4 bg-blue-50 border-l-4 border-blue-400 text-blue-800 rounded-r-lg">
+                        <h4 class="font-bold mb-2">A Note of Support</h4>
+                        <p id="advice-text"></p>
+                    </div>
+                    <div class="mb-5">
+                        <label for="file-upload" class="block text-sm font-medium text-gray-700 mb-2">Attach Image (Optional)</label>
+                        <input type="file" id="file-upload" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" accept="image/png, image/jpeg, image/gif"/>
+                        <p class="text-xs text-gray-500 mt-1">Allowed files: JPG, PNG, GIF. Max size: 700 KB.</p>
+                    </div>
+                    <div class="mb-6">
+                        <label for="location" class="block text-sm font-medium text-gray-700 mb-2">Location (Optional)</label>
+                        <input type="text" id="location" name="location" class="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg shadow-sm" placeholder="e.g., Library, Hostel Block C">
+                    </div>
+                    <button type="submit" id="submit-btn" class="w-full flex items-center justify-center bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-bold py-3 px-4 rounded-lg hover:shadow-xl hover:scale-105 transform transition-all duration-300">
+                           <span id="submit-btn-text">Submit Report</span>
+                           <div id="submit-loader" class="loader hidden"></div>
+                    </button>
+                </form>
+                <div id="submission-success" class="hidden mt-6 p-4 bg-green-100 border-l-4 border-green-500 text-green-800 rounded-r-lg">
+                    <p><strong>Success!</strong> Your report has been submitted.</p>
+                    <p>Your unique tracking ID is: <strong id="tracking-id" class="cursor-pointer" title="Copy to clipboard"></strong>. It's saved in your browser.</p>
+                </div>
+            </div>
+
+            <!-- Track Report Tab Content -->
+            <div id="track-tab" class="tab-content">
+                <form id="track-form">
+                    <div class="mb-4">
+                        <label for="track-id-input" class="block text-sm font-medium text-gray-700 mb-2">Tracking ID</label>
+                        <input type="text" id="track-id-input" class="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg shadow-sm" placeholder="Enter your tracking ID" required>
+                    </div>
+                    <button type="submit" class="w-full bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-bold py-3 px-4 rounded-lg hover:shadow-xl hover:scale-105 transform transition-all duration-300">Check Status</button>
+                </form>
+                <div id="saved-ids-container" class="mt-8">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-semibold text-gray-700">Your Saved Reports</h3>
+                        <button id="clear-history-btn" class="text-sm text-red-500 hover:underline"><i class="fas fa-trash-alt mr-1"></i>Clear History</button>
+                    </div>
+                    <div id="saved-ids-list" class="space-y-2"></div>
+                </div>
+                <div id="report-status-container" class="hidden mt-6">
+                     <h3 class="text-xl font-semibold mb-4 text-gray-700">Report Details</h3>
+                     <div class="bg-gray-50 p-5 rounded-lg border border-gray-200">
+                         <p class="mb-2"><strong>Tracking ID:</strong> <span id="status-id" class="font-mono text-indigo-600"></span></p>
+                         <p class="mb-2"><strong>Category:</strong> <span id="status-category" class="capitalize"></span></p>
+                         <p class="mb-4"><strong>Submitted:</strong> <span id="status-timestamp"></span></p>
+                         <p class="mb-4"><strong>Current Status:</strong> <span id="status-current" class="font-semibold text-indigo-600 px-3 py-1 bg-indigo-100 rounded-full text-sm"></span></p>
+                         <div class="mt-4">
+                             <h4 class="font-semibold mb-3">Status History</h4>
+                             <div id="status-history" class="border-l-2 border-indigo-200 pl-4 space-y-4"></div>
+                         </div>
+                         <div class="mt-6">
+                             <h4 class="font-semibold mb-3">Conversation</h4>
+                             <div id="conversation-thread" class="space-y-3 text-sm max-h-40 overflow-y-auto bg-white p-3 rounded-md border"></div>
+                             <div id="student-reply-area" class="mt-4"></div>
+                         </div>
+                     </div>
+                 </div>
+                 <div id="track-error" class="hidden mt-4 p-4 bg-red-100 border-l-4 border-red-500 text-red-800 rounded-r-lg">
+                     <p><strong>Error:</strong> No report found with that ID. Please check the ID and try again.</p>
+                 </div>
+            </div>
+        </div>
+        <footer class="text-center mt-10 text-sm text-gray-500">
+            <p>Your privacy is our priority. All reports are handled with strict confidentiality.</p>
+        </footer>
+    </div>
+
+    <script type="module">
         import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getFirestore, collection, addDoc, getDocs, query, where, onSnapshot, doc, updateDoc, arrayUnion, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-
-        // Initialize Firebase
+        
+        // Your Firebase configuration (copied from Firebase Console)
+        const firebaseConfig = {
+            apiKey: "AIzaSyC5fQX9JAH4Qp18UM8VMma4Y66aavxAX1U", 
+            authDomain: "studentvoiceplatform.firebaseapp.com",
+            projectId: "studentvoiceplatform",
+            storageBucket: "studentvoiceplatform.firebasestorage.app",
+            messagingSenderId: "144806283507",
+            appId: "1:144806283507:web:7531ca5af6baec47bc4f86"
+        };
+        
+        // Initialize Firebase app
         const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        let currentUser = null; // To store the anonymous user's ID
-
-        // Anonymous authentication
-        async function authenticateAnonymously() {
+        // Anonymous authentication and app initialization flow
+        (async () => {
             try {
-                const userCredential = await signInAnonymously(auth);
-                currentUser = userCredential.user;
-                console.log("Signed in anonymously:", currentUser.uid);
-                loadFeedback(); // Load feedback after successful authentication
+                await signInAnonymously(auth);
+                document.getElementById('loading-state').style.display = 'none'; // Hide loading spinner
+                document.getElementById('app-container').classList.remove('hidden'); // Show main app content
+                runApp(db); // Start the main application logic
             } catch (error) {
-                console.error("Error signing in anonymously:", error);
+                console.error("Firebase initialization failed:", error);
+                // Display a user-friendly error message if Firebase fails to initialize
+                document.body.innerHTML = `<div class="min-h-screen flex items-center justify-center"><div class="text-center p-8 bg-white rounded-lg shadow-lg"><h2 class="text-2xl font-bold text-red-700 mb-4">Connection Error</h2><p class="text-gray-600">Could not connect to services. Please ensure Anonymous Sign-In is enabled in your Firebase project.</p></div></div>`;
             }
-        }
+        })();
 
-        // Call authentication on page load
-        authenticateAnonymously();
+        // Main application logic encapsulated in a function
+        function runApp(db) {
+            const appId = 'default-app-id'; // Identifier for your application's data within Firestore
+            // Firestore collection path for reports. This follows the recommended secure structure.
+            const reportsCollectionPath = `artifacts/${appId}/public/data/reports`; 
 
-        document.getElementById('feedbackForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            if (!currentUser) {
-                alert("Please wait, still authenticating...");
-                return;
-            }
+            // Cache DOM elements for efficient access
+            const allElements = {
+                reportForm: document.getElementById('report-form'), 
+                trackForm: document.getElementById('track-form'),
+                submissionSuccess: document.getElementById('submission-success'), 
+                trackingIdEl: document.getElementById('tracking-id'),
+                reportStatusContainer: document.getElementById('report-status-container'), 
+                trackError: document.getElementById('track-error'),
+                getAdviceBtn: document.getElementById('get-advice-btn'), 
+                adviceContainer: document.getElementById('advice-container'),
+                adviceText: document.getElementById('advice-text'), 
+                submitBtn: document.getElementById('submit-btn'),
+                savedIdsContainer: document.getElementById('saved-ids-container'), 
+                savedIdsList: document.getElementById('saved-ids-list'),
+                clearHistoryBtn: document.getElementById('clear-history-btn'), 
+                trackIdInput: document.getElementById('track-id-input'),
+                conversationThread: document.getElementById('conversation-thread'), 
+                studentReplyArea: document.getElementById('student-reply-area'),
+                fileUpload: document.getElementById('file-upload'),
+                submitTabButton: document.getElementById('submit-tab-button'),
+                trackTabButton: document.getElementById('track-tab-button'),
+                adviceBtnText: document.getElementById('advice-btn-text'),
+                adviceLoader: document.getElementById('advice-loader'),
+                submitBtnText: document.getElementById('submit-btn-text'),
+                submitLoader: document.getElementById('submit-loader')
+            };
+            
+            let currentReportUnsubscribe = null; // Holds the unsubscribe function for Firestore real-time listener
+            let currentReportId = null; // Stores the Firestore document ID of the currently tracked report
+            const SAVED_IDS_KEY = `anonymousReportIds`; // Key for storing tracking IDs in local storage
 
-            const title = document.getElementById('feedbackTitle').value;
-            const category = document.getElementById('feedbackCategory').value;
-            const description = document.getElementById('feedbackDescription').value;
+            // Function to call the Gemini API for AI advice/summaries
+            async function callGemini(prompt) {
+                // Use your Render backend URL for Gemini API calls to keep your API key secure.
+                const backendGeminiUrl = "https://student-voice-backend-api.onrender.com/generate-advice"; 
+                const payload = { prompt: prompt }; // Send the prompt to your backend
 
-            try {
-                await addDoc(collection(db, "feedback"), {
-                    title: title,
-                    category: category,
-                    description: description,
-                    status: "Pending",
-                    submittedBy: currentUser.uid, // Store the anonymous user's ID
-                    timestamp: new Date()
-                });
-                alert('Feedback submitted successfully!');
-                document.getElementById('feedbackForm').reset();
-            } catch (e) {
-                console.error("Error adding document: ", e);
-                alert('Error submitting feedback. Please try again.');
-            }
-        });
-
-        async function loadFeedback() {
-            if (!currentUser) return; // Wait for authentication
-
-            const feedbackListDiv = document.getElementById('feedbackList');
-            feedbackListDiv.innerHTML = '<p class="text-center text-muted">Loading feedback...</p>'; // Clear and show loading
-
-            // Listen for real-time updates for feedback submitted by the current anonymous user
-            const q = query(collection(db, "feedback"), where("submittedBy", "==", currentUser.uid));
-
-            onSnapshot(q, (snapshot) => {
-                if (snapshot.empty) {
-                    feedbackListDiv.innerHTML = '<p class="text-center text-muted">No feedback submitted yet.</p>';
-                    return;
+                try {
+                    const response = await fetch(backendGeminiUrl, { 
+                        method: 'POST', 
+                        headers: { 'Content-Type': 'application/json' }, 
+                        body: JSON.stringify(payload) 
+                    });
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(`Backend API call failed: ${response.status} - ${errorData.error || 'Unknown error'}`);
+                    }
+                    const result = await response.json();
+                    return result.advice || "Could not retrieve advice."; // Backend returns 'advice' field
+                } catch (error) {
+                    console.error("Gemini API call via backend failed:", error);
+                    return `An error occurred while fetching advice: ${error.message}`;
                 }
+            }
 
-                feedbackListDiv.innerHTML = ''; // Clear previous feedback
-                snapshot.forEach((doc) => {
-                    const feedback = doc.data();
-                    const badgeClass = {
-                        "Pending": "badge-warning", // Updated to use specific classes
-                        "Resolved": "badge-success",
-                        "Rejected": "badge-danger"
-                    }[feedback.status] || "badge-secondary"; // Default if status is unknown
+            // Function to handle tab switching (Submit Report / Track Report)
+            const switchTab = (tabName) => {
+                document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+                document.querySelectorAll('.tab-button').forEach(button => {
+                    button.classList.remove('active', 'text-indigo-500');
+                    button.classList.add('text-gray-500');
+                });
+                
+                const activeTab = document.getElementById(`${tabName}-tab`);
+                const activeButton = document.getElementById(`${tabName}-tab-button`);
 
-                    feedbackListDiv.innerHTML += `
-                        <div class="feedback-item">
-                            <h5>${feedback.title} <span class="badge ${badgeClass} float-end">${feedback.status}</span></h5>
-                            <p><strong>Category:</strong> ${feedback.category}</p>
-                            <p>${feedback.description}</p>
-                            <small class="text-muted">Submitted on: ${feedback.timestamp.toDate().toLocaleString()}</small>
-                        </div>
+                activeTab.classList.add('active');
+                activeButton.classList.add('active', 'text-indigo-500');
+                activeButton.classList.remove('text-gray-500');
+
+                if (tabName === 'track') {
+                    // Load saved IDs when switching to the track tab
+                    if(window.loadTrackingIds) window.loadTrackingIds(); 
+                }
+            };
+            
+            // Event listeners for tab buttons
+            allElements.submitTabButton.onclick = () => switchTab('submit');
+            allElements.trackTabButton.onclick = () => switchTab('track');
+            
+            // Handle report submission form
+            if(allElements.reportForm) {
+                allElements.reportForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    allElements.submitBtnText.textContent = 'Submitting...';
+                    allElements.submitLoader.classList.remove('hidden');
+                    allElements.submitBtn.disabled = true;
+
+                    const formData = new FormData(allElements.reportForm);
+                    const description = formData.get('description');
+                    const category = formData.get('category');
+                    
+                    const file = allElements.fileUpload.files[0];
+                    const MAX_FILE_SIZE = 700 * 1024; // 700 KB maximum file size for attachments
+
+                    if (file && file.size > MAX_FILE_SIZE) {
+                        alert(`Image is too large. Max size is ${MAX_FILE_SIZE / 1024} KB.`);
+                        allElements.submitBtnText.textContent = 'Submit Report';
+                        allElements.submitLoader.classList.add('hidden');
+                        allElements.submitBtn.disabled = false;
+                        return;
+                    }
+
+                    // Function to convert file to Base64 for storage in Firestore
+                    const getImageBase64 = (file) => new Promise((resolve, reject) => {
+                        if (!file) { resolve(null); return; }
+                        const reader = new FileReader();
+                        reader.readAsDataURL(file);
+                        reader.onload = () => resolve(reader.result);
+                        reader.onerror = error => reject(error);
+                    });
+                    
+                    const attachedImage = await getImageBase64(file);
+                    // Summarize description using Gemini AI via backend
+                    const summary = await callGemini(`Summarize this report in one short sentence: "${description}"`);
+                    
+                    // Construct report data object
+                    const reportData = {
+                        trackingId: uuid.v4().substring(0, 8), // Generate an 8-character UUID for tracking
+                        category, 
+                        description,
+                        location: formData.get('location') || 'Not provided', 
+                        timestamp: new Date(),
+                        statusHistory: [{ status: 'Submitted', timestamp: new Date() }], // Initial status entry
+                        currentStatus: 'Submitted', 
+                        replies: [], // Array to store admin/student conversation replies
+                        hasAttachment: !!attachedImage, // Boolean to indicate if an image is attached
+                        summary // Gemini generated summary
+                    };
+
+                    try {
+                        // Add the report to Firestore
+                        const reportDocRef = await addDoc(collection(db, reportsCollectionPath), reportData);
+                        // Save image attachment if available in a subcollection of the report document
+                        if (attachedImage) {
+                            const attachmentRef = doc(db, reportsCollectionPath, reportDocRef.id, 'attachment', 'data');
+                            await setDoc(attachmentRef, { imageData: attachedImage });
+                        }
+                        allElements.trackingIdEl.textContent = reportData.trackingId;
+                        saveTrackingId(reportData.trackingId, reportData.category); // Save tracking ID to local storage
+                        allElements.submissionSuccess.classList.remove('hidden'); // Show success message
+                        allElements.reportForm.reset(); // Reset the form fields
+                        allElements.adviceContainer.classList.add('hidden'); // Hide advice after successful submission
+                        setTimeout(() => { allElements.submissionSuccess.classList.add('hidden'); }, 15000); // Hide success message after 15 seconds
+                    } catch (error) { 
+                        console.error("Error adding document: ", error); 
+                        alert("There was an error submitting your report. Please try again.");
+                    } finally {
+                        allElements.submitBtnText.textContent = 'Submit Report';
+                        allElements.submitLoader.classList.add('hidden');
+                        allElements.submitBtn.disabled = false;
+                    }
+                });
+            }
+
+            // Handle "Get Instant Advice" button click
+            if (allElements.getAdviceBtn) {
+                allElements.getAdviceBtn.addEventListener('click', async () => {
+                    const description = document.getElementById('description').value.trim();
+                    if (!description) { 
+                        alert("Please describe the situation first to get advice."); 
+                        return; 
+                    }
+                    
+                    allElements.adviceBtnText.classList.add('hidden'); 
+                    allElements.adviceLoader.classList.remove('hidden'); 
+                    allElements.getAdviceBtn.disabled = true;
+
+                    // Prompt for Gemini AI via backend
+                    const prompt = `As a compassionate student advisor, a student is reporting an issue: "${description}". Provide brief, calming, and constructive advice, focusing on next steps or emotional support.`;
+                    const advice = await callGemini(prompt);
+                    
+                    allElements.adviceText.textContent = advice; 
+                    allElements.adviceContainer.classList.remove('hidden');
+                    
+                    allElements.adviceBtnText.classList.remove('hidden'); 
+                    allElements.adviceLoader.classList.add('hidden'); 
+                    allElements.getAdviceBtn.disabled = false;
+                });
+            }
+
+            // Handle track report form submission
+            if(allElements.trackForm) {
+                allElements.trackForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const trackId = allElements.trackIdInput.value.trim();
+                    if (!trackId) return;
+                    
+                    allElements.reportStatusContainer.classList.add('hidden'); 
+                    allElements.trackError.classList.add('hidden');
+                    if (currentReportUnsubscribe) currentReportUnsubscribe(); // Stop previous real-time listener
+
+                    try {
+                        const q = query(collection(db, reportsCollectionPath), where("trackingId", "==", trackId));
+                        const querySnapshot = await getDocs(q); // Use getDocs for initial fetch
+
+                        if (querySnapshot.empty) {
+                            allElements.trackError.classList.remove('hidden');
+                        } else {
+                            const reportDoc = querySnapshot.docs[0];
+                            currentReportId = reportDoc.id; // Store document ID for replies
+                            // Set up a real-time listener for the specific report document
+                            currentReportUnsubscribe = onSnapshot(doc(db, reportsCollectionPath, reportDoc.id), (docSnapshot) => {
+                                if (docSnapshot.exists()) {
+                                    displayReportStatus(docSnapshot.data());
+                                } else {
+                                    console.log("Report no longer exists.");
+                                    allElements.trackError.classList.remove('hidden');
+                                    allElements.reportStatusContainer.classList.add('hidden');
+                                }
+                            }, (error) => {
+                                console.error("Error listening to report changes:", error);
+                                allElements.trackError.classList.remove('hidden');
+                            });
+                        }
+                    } catch (error) { 
+                        console.error("Error fetching report:", error); 
+                        allElements.trackError.classList.remove('hidden'); 
+                    }
+                });
+            }
+
+            // Function to display fetched report status and history
+            function displayReportStatus(data) {
+                if (!data) return;
+                document.getElementById('status-id').textContent = data.trackingId;
+                document.getElementById('status-category').textContent = data.category;
+                document.getElementById('status-timestamp').textContent = new Date(data.timestamp.seconds * 1000).toLocaleString();
+                document.getElementById('status-current').textContent = data.currentStatus;
+
+                const historyList = document.getElementById('status-history');
+                historyList.innerHTML = '';
+                // Sort status history by timestamp descending (most recent first)
+                data.statusHistory.sort((a, b) => b.timestamp.seconds - a.timestamp.seconds).forEach((item, index) => {
+                    const div = document.createElement('div');
+                    div.className = 'relative';
+                    div.innerHTML = `
+                        <div class="absolute w-3 h-3 bg-indigo-300 rounded-full -left-[22px] top-1 ${index === 0 ? 'bg-indigo-500' : ''}"></div>
+                        <p class="font-semibold ${index === 0 ? 'text-gray-800' : 'text-gray-600'}">${item.status}</p>
+                        <p class="text-sm text-gray-500">${new Date(item.timestamp.seconds * 1000).toLocaleString()}</p>
                     `;
-                });
-            }, (error) => {
-                console.error("Error loading feedback:", error);
-                feedbackListDiv.innerHTML = '<p class="text-center text-danger">Error loading feedback.</p>';
-            });
-        }
-
-
-        async function getAiAdvice() {
-            const aiPrompt = document.getElementById('aiPrompt').value.trim();
-            const aiAdviceOutput = document.getElementById('aiAdviceOutput');
-
-            if (!aiPrompt) {
-                aiAdviceOutput.innerHTML = '<p class="text-danger">Please enter a question or description for AI advice.</p>';
-                return;
-            }
-
-            aiAdviceOutput.innerHTML = '<p class="text-muted">Getting AI advice...</p>';
-
-            const loadingSpinner = `
-                <div class="d-flex justify-content-center">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
-                </div>
-                <p class="text-center mt-2 text-muted">Thinking...</p>
-            `;
-            aiAdviceOutput.innerHTML = loadingSpinner;
-
-
-            // Call your backend endpoint
-            const backendUrl = "/generate-advice"; // Use relative path since backend serves this HTML
-            try {
-                const response = await fetch(backendUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ prompt: aiPrompt })
+                    historyList.appendChild(div);
                 });
 
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(`API call failed: ${response.status} - ${errorData.error || 'Unknown error'}`);
+                allElements.conversationThread.innerHTML = '';
+                const hasStudentReplied = data.replies && data.replies.some(r => r.sender === 'student');
+                
+                if (data.replies && data.replies.length > 0) {
+                    data.replies.forEach(reply => {
+                        const replyEl = document.createElement('div');
+                        const replyDate = new Date(reply.timestamp.seconds * 1000).toLocaleString();
+                        if (reply.sender === 'admin') {
+                            replyEl.className = 'bg-indigo-50 p-3 rounded-lg';
+                            replyEl.innerHTML = `<p class="font-semibold text-indigo-800">Admin:</p><p class="mb-1">${reply.text}</p><p class="text-xs text-gray-500 text-right italic">${replyDate}</p>`;
+                        } else {
+                            replyEl.className = 'bg-green-50 p-3 rounded-lg';
+                            replyEl.innerHTML = `<p class="font-semibold text-green-800">Your Reply:</p><p class="mb-1">${reply.text}</p><p class="text-xs text-gray-500 text-right italic">${replyDate}</p>`;
+                        }
+                        allElements.conversationThread.appendChild(replyEl);
+                    });
+                    // Scroll to bottom of conversation to show latest messages
+                    allElements.conversationThread.scrollTop = allElements.conversationThread.scrollHeight;
+                } else {
+                    allElements.conversationThread.innerHTML = '<p class="text-center text-gray-400 text-center p-2">No messages yet.</p>';
                 }
 
-                const result = await response.json();
-                aiAdviceOutput.innerHTML = `<p>${result.advice || "Could not retrieve advice."}</p>`;
-            } catch (error) {
-                console.error("Error fetching AI advice:", error);
-                aiAdviceOutput.innerHTML = `<p class="text-danger">Error getting AI advice: ${error.message}</p>`;
-            }
-        }
+                // Show student reply area only if they haven't replied yet and report is not resolved/rejected
+                if (!hasStudentReplied && data.currentStatus !== 'Resolved' && data.currentStatus !== 'Rejected') { 
+                    allElements.studentReplyArea.innerHTML = `
+                        <form id="student-reply-form" class="mt-4">
+                            <textarea class="w-full p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500" placeholder="Type your one-time reply to admin..." required></textarea>
+                            <button type="submit" class="w-full mt-2 bg-green-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-green-700 transition-colors">Send Reply</button>
+                        </form>
+                    `;
+                    document.getElementById('student-reply-form').addEventListener('submit', handleStudentReply);
+                } else {
+                    allElements.studentReplyArea.innerHTML = '<p class="text-center text-sm text-gray-500 mt-4">You have already replied to this report or it cannot be replied to.</p>';
+                }
 
-        // Basic logout function (for anonymous, mainly clears local session if any)
-        function logout() {
-            auth.signOut().then(() => {
-                console.log("User signed out.");
-                currentUser = null;
-                // Optionally redirect or refresh to force re-auth
-                location.reload();
-            }).catch((error) => {
-                console.error("Error signing out:", error);
-            });
+                allElements.reportStatusContainer.classList.remove('hidden'); // Show the report details container
+            }
+
+            // Handle student's one-time reply submission
+            async function handleStudentReply(e) {
+                e.preventDefault();
+                const replyText = e.target.querySelector('textarea').value.trim();
+                if (!replyText || !currentReportId) return;
+                
+                const replyButton = e.target.querySelector('button');
+                replyButton.disabled = true;
+                replyButton.textContent = 'Sending...';
+
+                const reportRef = doc(db, reportsCollectionPath, currentReportId);
+                try {
+                    await updateDoc(reportRef, {
+                        replies: arrayUnion({ text: replyText, timestamp: new Date(), sender: 'student' })
+                    });
+                    alert('Reply sent!');
+                    // The onSnapshot listener will automatically update the display
+                } catch (error) {
+                    console.error("Error sending reply:", error);
+                    alert('Failed to send reply. Please try again.');
+                } finally {
+                    replyButton.disabled = false;
+                    replyButton.textContent = 'Send Reply';
+                }
+            }
+            
+            // Save tracking ID to local storage for persistence
+            function saveTrackingId(id, category) {
+                let savedIds = JSON.parse(localStorage.getItem(SAVED_IDS_KEY)) || [];
+                if (!savedIds.some(item => item.id === id)) { // Avoid duplicates
+                    savedIds.unshift({ id, category, date: new Date().toISOString() }); // Add to the beginning
+                    // Limit the number of saved IDs to prevent excessive storage
+                    if (savedIds.length > 10) {
+                        savedIds = savedIds.slice(0, 10);
+                    }
+                    localStorage.setItem(SAVED_IDS_KEY, JSON.stringify(savedIds));
+                }
+            }
+            
+            // Load and display saved tracking IDs from local storage
+            window.loadTrackingIds = function() { // Made global so it can be called by switchTab
+                const savedIds = JSON.parse(localStorage.getItem(SAVED_IDS_KEY)) || [];
+                allElements.savedIdsList.innerHTML = ''; // Clear previous list
+                if (savedIds.length > 0) {
+                    allElements.savedIdsContainer.classList.remove('hidden');
+                    savedIds.forEach(item => {
+                        const button = document.createElement('button');
+                        button.className = 'w-full text-left p-3 bg-gray-100 hover:bg-indigo-50 rounded-lg text-sm transition-colors duration-200 flex justify-between items-center';
+                        button.innerHTML = `
+                            <div>
+                                <span class="font-bold text-indigo-600">${item.id}</span> - 
+                                <span class="text-gray-700 capitalize">${item.category}</span>
+                            </div>
+                            <div class="flex items-center">
+                                <span class="text-gray-500 mr-4">${new Date(item.date).toLocaleDateString()}</span>
+                                <i class="fas fa-chevron-right text-gray-400"></i>
+                            </div>`;
+                        button.onclick = () => { 
+                            allElements.trackIdInput.value = item.id; 
+                            allElements.trackForm.requestSubmit(); // Programmatically submit the form to check status
+                        };
+                        allElements.savedIdsList.appendChild(button);
+                    });
+                } else {
+                    allElements.savedIdsList.innerHTML = `<p class="text-center text-gray-500 py-4">No saved reports yet. Submit one to get started!</p>`;
+                }
+            };
+            
+            // Event listener for clearing saved tracking IDs history
+            if (allElements.clearHistoryBtn) { 
+                allElements.clearHistoryBtn.addEventListener('click', () => { 
+                    if (confirm("Are you sure you want to clear your saved report history? This cannot be undone.")) { 
+                        localStorage.removeItem(SAVED_IDS_KEY); 
+                        window.loadTrackingIds(); // Reload the list to show it's empty
+                    } 
+                }); 
+            }
+
+            // Copy tracking ID to clipboard functionality
+            if (allElements.trackingIdEl) { 
+                allElements.trackingIdEl.addEventListener('click', () => { 
+                    const textToCopy = allElements.trackingIdEl.textContent; 
+                    navigator.clipboard.writeText(textToCopy).then(() => {
+                        allElements.trackingIdEl.title = 'Copied!'; 
+                        setTimeout(() => { allElements.trackingIdEl.title = 'Copy to clipboard'; }, 2000);
+                    }).catch(err => {
+                        console.error('Copy failed', err);
+                        // Fallback for older browsers or restricted environments (e.g., iframes)
+                        const textArea = document.createElement("textarea");
+                        textArea.value = textToCopy;
+                        textArea.style.position = "fixed";
+                        textArea.style.left = "-9999px";
+                        document.body.appendChild(textArea);
+                        textArea.focus();
+                        textArea.select();
+                        try {
+                            document.execCommand('copy');
+                            allElements.trackingIdEl.title = 'Copied! (Fallback)'; 
+                            setTimeout(() => { allElements.trackingIdEl.title = 'Copy to clipboard'; }, 2000);
+                        } catch (execErr) {
+                            console.error('Fallback copy failed', execErr);
+                            alert('Failed to copy. Please copy manually: ' + textToCopy);
+                        }
+                        document.body.removeChild(textArea);
+                    });
+                }); 
+            }
         }
     </script>
 </body>
