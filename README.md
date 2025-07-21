@@ -1,17 +1,21 @@
 This is the link for my website...   """https://studentvoiceplatform.web.app/"""
 
 Student Voice Platform
+
 This project is an anonymous feedback and communication platform designed for students to securely submit concerns and receive updates. It aims to provide a transparent and efficient channel for addressing student issues within an educational institution.
 
 Key Features:
 
 Anonymous Report Submission: Students can submit detailed reports on various categories (e.g., Harassment, Academic, Infrastructure) with an optional image attachment.
 
-Instant AI Advice: Integrates the Google Gemini API to provide immediate, supportive, and constructive advice to students based on their submitted concerns.
+Instant AI Advice: 
+Integrates the Google Gemini API to provide immediate, supportive, and constructive advice to students based on their submitted concerns.
 
-Real-time Report Tracking: Students receive a unique tracking ID to monitor the status of their reports and view conversation threads with administrators.
+Real-time Report Tracking: 
+Students receive a unique tracking ID to monitor the status of their reports and view conversation threads with administrators.
 
-Comprehensive Admin Dashboard: Administrators gain a powerful interface to:
+Comprehensive Admin Dashboard: 
+Administrators gain a powerful interface to:
 
 View all submitted reports in real-time.
 
@@ -27,15 +31,20 @@ View attached images for each report.
 
 Technologies Used:
 
-Frontend: HTML, JavaScript, Tailwind CSS (for a modern, responsive UI), Chart.js (for data visualization).
+Frontend: 
+HTML, JavaScript, Tailwind CSS (for a modern, responsive UI), Chart.js (for data visualization).
 
-Backend (API Proxy): Node.js hosted on Render (securely proxies Google Gemini API calls, keeping the API key confidential).
+Backend (API Proxy): 
+Node.js hosted on Render (securely proxies Google Gemini API calls, keeping the API key confidential).
 
-Database & Authentication: Google Firebase (Firestore for real-time data storage, Authentication for anonymous user access).
+Database & Authentication: 
+Google Firebase (Firestore for real-time data storage, Authentication for anonymous user access).
 
-AI Integration: Google Gemini API (for generating advice and summaries).
+AI Integration: 
+Google Gemini API (for generating advice and summaries).
 
-Hosting: Firebase Hosting.
+Hosting: 
+Firebase Hosting.
 
 Security & Privacy:
 
